@@ -782,52 +782,6 @@ html.is-mobile .logo-nav { height:58px; }
 
 
 
-/* badge on cart */
-.fab-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 12px;
-  background: #ff3b3b;
-  color: #fff;
-  font-weight: 700;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-}
-
-/* small screens adjust */
-@media (max-width: 720px) {
-  #floatBubbles { right: 12px; bottom: 14px; gap:10px; }
-  .fab { width:52px; height:52px; }
-  .fab-badge { top:-5px; right:-5px; min-width:18px; height:18px; font-size:11px; }
-}
-
-/* optional pulse for WhatsApp bubble to draw attention */
-.fab-ws::after {
-  content: "";
-  position: absolute;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(37,211,102,0.12) 0%, rgba(37,211,102,0) 60%);
-  animation: pulseWs 2.6s infinite;
-  z-index: -1;
-  transform: scale(1);
-}
-@keyframes pulseWs {
-  0% { transform: scale(0.9); opacity: 1; }
-  70% { transform: scale(1.6); opacity: 0; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-
-
-
 /* Badge "Agotado" */
 .agotado-badge {
   display:inline-block;
@@ -967,14 +921,6 @@ main, .section {
 
 
 
-/* >>> Ajustes para centrar los textos de la sección INICIO */
-#inicio .title,
-#inicio .subtitle,
-#inicio .welcome-message,
-#inicio .home-cta,
-#inicio .home-section {
-  text-align: center;
-}
 
 /* Limitar ancho del contenido y centrar con márgenes automáticos */
 #inicio .welcome-message {
@@ -985,12 +931,6 @@ main, .section {
   color: inherit;
 }
 
-/* Asegurar que el CTA quede centrado */
-#inicio .home-cta {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-}
 
 /* Centrar y acotar los bloques de Favoritos y Promos */
 #inicio .home-section,
@@ -998,13 +938,6 @@ main, .section {
 #inicio #promosContainer {
   max-width: 1100px;
   margin: 1rem auto;
-}
-
-/* Pequeñas mejoras responsivas */
-@media (max-width: 720px) {
-  #inicio .welcome-message { padding: 0 1rem; font-size: 1rem; }
-  #inicio .title { font-size: 1.6rem; }
-  #inicio .subtitle { font-size: 1rem; }
 }
 
 
@@ -1164,4 +1097,487 @@ main, .section {
 @media (max-width: 720px) {
   .card-price { font-size: 0.98rem; font-weight: 800; color: var(--neon-cyan, #00ffd6); }
   .product-card .precio, .product-card .oferta { font-size: 0.98rem; }
+}
+
+
+
+
+
+
+
+
+
+
+/* tutorial.css (estilos centrados - versión v2)
+   - Mantener este archivo junto a tutorial.js y enlazar en index.html.
+   - Asegura que los botones del tutorial sean clicables aún si el cuadro está encima del área explicada.
+*/
+
+/* Overlay: permitir click-through (no bloquear la página) */
+#efTutorialOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3,6,9,0.55);
+  z-index: 9998;
+  display: none;
+}
+#efTutorialOverlay.visible { display: block; }
+
+/* Tooltip centrado; pointer-events: none permite click-through excepto en controles */
+#efTutorialTooltip {
+  pointer-events: none;
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 9999;
+  width: min(720px, 92%);
+  max-width: 720px;
+  background: linear-gradient(180deg,#0f1318,#0b0b0d);
+  color: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.98rem;
+}
+#efTutorialTooltip h3 { margin: 0 0 8px 0; color: var(--neon-pink,#ff295e); }
+#efTutBody { color: #cfeee6; line-height: 1.35; }
+
+/* Controles activos: botones del tooltip son interactivos */
+#efTutControls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+#efTutControls .btn.small { padding: 6px 10px; font-size: 0.88rem; }
+
+/* Prompt inicial (No, gracias / Sí, empezar) */
+#efTutorialPrompt {
+  position: fixed;
+  left: 50%;
+  top: 14%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  width: min(720px, 92%);
+  max-width: 720px;
+  background: linear-gradient(180deg,#0f1318,#0b0b0d);
+  color: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.7);
+  display: none;
+  pointer-events: auto;
+}
+#efTutorialPrompt.open { display: block; }
+
+/* Highlight en elementos (sombra + outline) */
+.ef-tut-highlight {
+  position: relative;
+  z-index: 10002 !important;
+  box-shadow: 0 18px 60px rgba(255,41,94,0.12) !important;
+  outline: 3px solid rgba(255,41,94,0.12) !important;
+  border-radius: 10px;
+  transform: translateY(-4px);
+  transition: box-shadow 220ms ease, outline 220ms ease, transform 220ms ease;
+}
+
+/* Glow pulsante para botones (carrito / whatsapp) */
+.ef-tut-glow {
+  animation: efGlowPulse 1.6s infinite;
+  box-shadow: 0 12px 40px rgba(255,41,94,0.18), 0 6px 26px rgba(255,41,94,0.12);
+  transform: translateY(-2px);
+}
+@keyframes efGlowPulse {
+  0% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,41,94,0.12); }
+  50% { transform: scale(1.06); box-shadow: 0 18px 54px rgba(255,41,94,0.22); }
+  100% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,41,94,0.12); }
+}
+
+/* Mobile: tooltip centrado y ancho completo */
+@media (max-width: 720px) {
+  #efTutorialTooltip { width: calc(100% - 24px); left: 50%; top: 50%; transform: translate(-50%,-50%); }
+  #efTutorialPrompt { width: calc(100% - 24px); top: 8%; left: 50%; transform: translateX(-50%); }
+}
+
+
+
+
+
+
+```css
+/* ======= Agregar al final de styles.css ======= */
+
+/* Parpadeo / pulso en el botón del carrito */
+.ef-cart-blink {
+  animation: efCartPulse 720ms ease-in-out 4;
+  transform-origin: center;
+}
+@keyframes efCartPulse {
+  0% { transform: scale(1); box-shadow: 0 10px 30px rgba(255,41,94,0.08); }
+  25% { transform: scale(1.08); box-shadow: 0 18px 44px rgba(255,41,94,0.16); }
+  50% { transform: scale(1.12); box-shadow: 0 22px 60px rgba(255,41,94,0.2); }
+  75% { transform: scale(1.06); box-shadow: 0 14px 40px rgba(255,41,94,0.12); }
+  100% { transform: scale(1); box-shadow: 0 10px 30px rgba(255,41,94,0.08); }
+}
+
+/* Tip flotante que apunta al carrito (mensaje + flecha) */
+.cart-pulse-tip {
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  max-width: 320px;
+  background: linear-gradient(180deg,#111217,#0b0b0d);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.6), 0 8px 28px rgba(255,41,94,0.06);
+  border: 1px solid rgba(255,255,255,0.04);
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 240ms ease, transform 260ms ease;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.cart-pulse-tip.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Cuerpo del tip */
+.cart-tip-body { display:flex; flex-direction:column; gap:4px; }
+.cart-tip-text {
+  font-weight: 900;
+  color: var(--neon-pink, #ff295e);
+  font-size: 0.98rem;
+}
+.cart-tip-note {
+  font-size: 0.82rem;
+  color: #cfeee6;
+  opacity: 0.95;
+}
+
+/* Flecha (triángulo) que se posiciona dentro del tip y apunta hacia el elemento */
+.cart-tip-arrow {
+  position: absolute;
+  bottom: -10px; /* sobresale debajo del tip */
+  width: 20px;
+  height: 10px;
+  left: 20px; /* se reubica por JS */
+  transform-origin: center;
+}
+.cart-tip-arrow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 10px 10px 0 10px;
+  border-style: solid;
+  border-color: rgba(17,18,23,0.98) transparent transparent transparent;
+  display: block;
+  width: 0;
+  height: 0;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+}
+
+/* Hacer la flecha punteada leve (glow) en el ciclo del tip */
+.cart-pulse-tip.show .cart-tip-arrow::before {
+  animation: efArrowPulse 1200ms ease-in-out infinite;
+}
+@keyframes efArrowPulse {
+  0% { transform: translateX(-50%) translateY(0); opacity: 1; }
+  50% { transform: translateX(-50%) translateY(4px); opacity: 0.7; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* Ajustes en móvil para que no tape contenido importante */
+@media (max-width: 720px) {
+  .cart-pulse-tip { min-width: 160px; max-width: 260px; font-size: 0.92rem; padding: 8px 10px; }
+  .cart-tip-arrow { bottom: -8px; }
+}
+```
+
+
+
+
+
+/* ========== CATEGORÍAS PLEGABLES (GRID CON EXPANSIÓN HACIA ABAJO) ========== */
+
+/* Contenedor principal que envuelve todo */
+.catalog-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Contenedor grid de categorías contraídas - se mantiene en una línea */
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+/* TARJETA DE CATEGORÍA CONTRAÍDA */
+.category-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 1rem 0.8rem;
+  background: linear-gradient(135deg, rgba(255,41,94,0.12), rgba(127,0,255,0.08));
+  border-radius: 12px;
+  border: 2px solid rgba(255,41,94,0.15);
+  transition: all 0.25s ease;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(255,41,94,0.08), inset 0 -2px 6px rgba(0,0,0,0.2);
+  min-height: 100px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Efecto brillo de fondo */
+.category-header::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(600px 200px at 10% 10%, rgba(127,0,255,0.03), transparent 8%),
+              radial-gradient(500px 160px at 100% 100%, rgba(0,234,255,0.02), transparent 8%);
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+.category-header:hover {
+  background: linear-gradient(135deg, rgba(255,41,94,0.18), rgba(127,0,255,0.12));
+  border-color: rgba(255,41,94,0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(255,41,94,0.12), inset 0 -2px 6px rgba(0,0,0,0.2);
+}
+
+.category-header.collapsed {
+  background: linear-gradient(135deg, rgba(255,41,94,0.14), rgba(127,0,255,0.1));
+  border-color: rgba(255,41,94,0.2);
+}
+
+.category-header.collapsed:hover {
+  background: linear-gradient(135deg, rgba(255,41,94,0.22), rgba(127,0,255,0.16));
+  border-color: rgba(255,41,94,0.3);
+}
+
+/* Contenedor interno del header */
+.category-header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 2;
+  position: relative;
+  width: 100%;
+}
+
+/* Toggle icon */
+.category-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: var(--neon-cyan, #00ffd6);
+  background: rgba(0,234,255,0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(0,234,255,0.2);
+  transition: transform 0.25s ease, background 0.25s ease;
+  flex-shrink: 0;
+}
+
+.category-header:hover .category-toggle {
+  background: rgba(0,234,255,0.2);
+  border-color: rgba(0,234,255,0.4);
+  box-shadow: 0 0 8px rgba(0,234,255,0.2);
+}
+
+.category-header.collapsed .category-toggle {
+  transform: rotate(180deg);
+}
+
+/* Título de categoría */
+.category-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  line-height: 1.2;
+}
+
+/* Hint text */
+.category-hint {
+  font-size: 0.7rem;
+  color: #cfeee6;
+  font-weight: 600;
+  margin: 0;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* CONTENEDOR DE PRODUCTOS EXPANDIDO */
+.category-container {
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  max-height: 0;
+  opacity: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.category-container.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+}
+
+/* Cuando se expande */
+.category-container:not(.collapsed) {
+  max-height: 2000px;
+  opacity: 1;
+  padding: 1.5rem 0;
+  margin: 1rem 0;
+  width: 100%;
+  border-top: 2px solid rgba(255,41,94,0.1);
+  border-bottom: 2px solid rgba(255,41,94,0.1);
+}
+
+/* Grid de productos dentro del contenedor expandido */
+.category-container .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 1200px) {
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.9rem;
+  }
+  
+  .category-header {
+    padding: 0.9rem 0.7rem;
+    min-height: 95px;
+    font-size: 1rem;
+  }
+  
+  .category-title {
+    font-size: 0.95rem;
+  }
+  
+  .category-hint {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.8rem;
+  }
+  
+  .category-header {
+    padding: 0.85rem 0.6rem;
+    min-height: 90px;
+    border-radius: 10px;
+  }
+  
+  .category-title {
+    font-size: 0.92rem;
+  }
+  
+  .category-hint {
+    font-size: 0.65rem;
+  }
+  
+  .category-toggle {
+    width: 26px;
+    height: 26px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.7rem;
+  }
+  
+  .category-header {
+    padding: 0.8rem 0.55rem;
+    min-height: 85px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+  }
+  
+  .category-title {
+    font-size: 0.88rem;
+  }
+  
+  .category-hint {
+    font-size: 0.62rem;
+  }
+  
+  .category-toggle {
+    width: 24px;
+    height: 24px;
+    font-size: 0.95rem;
+  }
+  
+  .category-container .grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+  }
+  
+  .category-header {
+    padding: 0.7rem 0.5rem;
+    min-height: 80px;
+    font-size: 0.9rem;
+  }
+  
+  .category-title {
+    font-size: 0.82rem;
+  }
+  
+  .category-hint {
+    font-size: 0.6rem;
+  }
+  
+  .category-container .grid {
+    grid-template-columns: 1fr;
+  }
 }
