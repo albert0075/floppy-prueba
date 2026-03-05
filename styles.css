@@ -1527,7 +1527,7 @@ main, .section {
 
 @media (max-width: 720px) {
   .categories-grid {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.7rem;
   }
   
@@ -1581,3 +1581,4 @@ main, .section {
     grid-template-columns: 1fr;
   }
 }
+
