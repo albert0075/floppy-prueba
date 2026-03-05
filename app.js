@@ -28,6 +28,9 @@ let bulkDiscount = { enabled: false, minItems: 4, percent: 20, applyTo: 'all' };
 let sitePromos = [];
 let currentPromo = null;
 
+
+
+
 /* ========== Helpers ========== */
 function cleanPayload(obj) {
   const out = {};
@@ -186,13 +189,46 @@ function renderCatalog() {
     comboBanner.innerHTML = `<div><strong>¡Combo 3x2 activo!</strong><span style="display:block;font-size:1rem;">Elige cualquier <b>3 servicios</b> y el de menor precio elegible ¡te sale GRATIS!</span></div>`;
   } else if (comboBanner) comboBanner.remove();
 
+  // Crear wrapper para mantener grid compacto
+  const wrapper = document.createElement('div');
+  wrapper.className = 'catalog-wrapper';
+
+  // Crear contenedor grid para categorías
+  const categoriesGrid = document.createElement('div');
+  categoriesGrid.className = 'categories-grid';
+
   // categories
   const cats = [...new Set(PRODUCTS.map(p => p.categoria || 'Sin categoría'))];
+  
+  // Almacenar referencias de headers
+  const categoryRefs = {};
+  
   cats.forEach(cat => {
-    const catTitle = document.createElement('div');
-    catTitle.className = 'category-title';
-    catTitle.innerText = cat;
-    container.appendChild(catTitle);
+    // CREAR HEADER PLEGABLE (TARJETA COMPACTA)
+    const catHeader = document.createElement('div');
+    catHeader.className = 'category-header collapsed'; // COMIENZA CONTRAÍDO
+    catHeader.setAttribute('data-category', cat);
+    catHeader.innerHTML = `
+      <div class="category-header-content">
+        <span class="category-toggle">▶</span>
+        <h3 class="category-title">${htmlEscape(cat)}</h3>
+        <p class="category-hint">Da click para desplegar</p>
+      </div>
+    `;
+    
+    categoriesGrid.appendChild(catHeader);
+    categoryRefs[cat] = catHeader;
+  });
+
+  wrapper.appendChild(categoriesGrid);
+  container.appendChild(wrapper);
+
+  // CREAR CONTENEDORES DE PRODUCTOS (debajo del grid, uno al lado del otro)
+  cats.forEach(cat => {
+    // CREAR CONTENEDOR DE PRODUCTOS (inicialmente plegado)
+    const catContent = document.createElement('div');
+    catContent.className = 'category-container collapsed'; // COMIENZA CONTRAÍDO
+    catContent.setAttribute('data-category', cat);
 
     const grid = document.createElement('div');
     grid.className = 'grid';
@@ -204,7 +240,6 @@ function renderCatalog() {
 
       if (prod.oferta || prod.promo) card.classList.add('is-promoted');
 
-      // Build compact visible elements; longer info remains in modal (detalles)
       const precioHtml = prod.oferta
         ? `<span class="oferta">Oferta: ${precioCOP(prod.oferta)} <span style="font-size:0.95em;text-decoration:line-through;color:#aaa;">${precioCOP(prod.precio)}</span></span>`
         : `<span class="precio">${precioCOP(prod.precio)}</span>`;
@@ -215,21 +250,18 @@ function renderCatalog() {
 
       const agotadoHtml = prod.agotado ? `<div><span class="agotado-badge">Agotado</span></div>` : '';
 
-      // En la tarjeta mostramos img, nombre, precio visible y botones. El resto será visible en el modal (detalles)
       card.innerHTML = `
         <img class="product-image" src="${prod.imagen || 'images/placeholder.png'}" alt="${htmlEscape(prod.nombre)}" onclick="showProductDetails('${prod.id}')" style="cursor:pointer">
         ${agotadoHtml}
         <h3 onclick="showProductDetails('${prod.id}')" style="cursor:pointer">${htmlEscape(prod.nombre)}</h3>
 
-        <!-- Precio visible fuera de la tarjeta -->
         <div class="card-price" aria-hidden="false">${precioHtml}</div>
 
         <div class="card-actions">
-          ${prod.agotado ? `<button class="btn" disabled style="opacity:0.5;cursor:not-allowed;">Agotado</button>` : `<button class="btn" onclick="addToCart('${prod.id}')">Comprar</button>`}
+          ${prod.agotado ? `<button class="btn" disabled style="opacity:0.5;cursor:not-allowed;">Agotado</button>` : `<button class="btn" onclick="addToCart('${prod.id}')">Add carrito</button>`}
           <button class="btn small ver-mas-btn" onclick="showProductDetails('${prod.id}')">Mas Info</button>
         </div>
 
-        <!-- detailed info hidden for compact view but used for accessibility / desktop view -->
         <div class="card-info" aria-hidden="true" style="display:none;">
           ${promoHtml}
           ${descHtml}
@@ -240,9 +272,25 @@ function renderCatalog() {
       grid.appendChild(card);
     });
 
-    container.appendChild(grid);
+    catContent.appendChild(grid);
+    container.appendChild(catContent);
+
+    // BIND EVENTO CLICK AL HEADER PARA PLEGAR/DESPLEGAR
+    const catHeader = categoryRefs[cat];
+    if (catHeader) {
+      catHeader.addEventListener('click', function(e) {
+        e.preventDefault();
+        const relatedContent = container.querySelector(`.category-container[data-category="${cat}"]`);
+        if (relatedContent) {
+          relatedContent.classList.toggle('collapsed');
+          catHeader.classList.toggle('collapsed');
+        }
+      });
+    }
   });
 }
+
+
 
 /* ========== Home (Favorites + Promos) ========== */
 function renderHomeExtras() {
@@ -1124,3 +1172,501 @@ function setupMobileColumnsControl() {
     });
   })();
 });
+
+
+
+
+
+
+
+
+/* tutorial.js (versión centrada, con glow en botones carrito/whatsapp,
+   comportamiento de cierre en "No, gracias" / "Saltar" / "Finalizar",
+   y permite que los botones del tutorial sean clicables aun cuando el recuadro
+   esté sobre la parte que se está explicando).
+   - Diseñado para cargarse DESPUÉS de app.js (usa showSection/renderCatalog/renderCart si existen).
+   - Colocar en la raíz del proyecto o en assets/ y enlazar en index.html.
+*/
+(function () {
+  if (window.__electroflips_tutorial_installed_centered_v2) return;
+  window.__electroflips_tutorial_installed_centered_v2 = true;
+
+ const STEPS = [
+    {
+      id: 'zoom',
+      title: 'Mejor visualización',
+      text: 'Recomendamos usar zoom del navegador al 80% para una mejor visualización en escritorio. Puedes cambiarlo desde el menú del navegador (Ctrl/Cmd + -).'
+    },
+    {
+      id: 'zoom',
+      title: 'Mejor visualización',
+      text: 'Recomendamos usar zoom del navegador al 80% para una mejor visualización en escritorio. Puedes cambiarlo llendo a la configuración de Chrome (los tres puntos) > Accesibilidad para un zoom general o ajustar el Zoom de página desde las opciones de los 3 puntos.'
+    },
+  ];
+
+  /* Inyecta estilos (si no existen) */
+  function injectTutorialStyles() {
+    if (document.getElementById('tutorialStyles_centered_v2')) return;
+    const css = document.createElement('style');
+    css.id = 'tutorialStyles_centered_v2';
+    css.innerHTML = `
+/* Styles para tutorial centrado y comportamiento interactivo */
+#efTutorialOverlay { position: fixed; inset:0; background: rgba(3,6,9,0.55); z-index: 9998; display:none; }
+#efTutorialOverlay.visible { display:block; }
+
+/* Tooltip centrado; pointer-events: none permite que clicks pasen al contenido detrás
+   excepto en los botones (que tienen pointer-events:auto). Esto permite interactuar
+   con elementos de la página aun cuando el tooltip esté encima. */
+#efTutorialTooltip {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 9999;
+  width: min(720px, 92%);
+  max-width: 720px;
+  background: linear-gradient(180deg,#0f1318,#0b0b0d);
+  color: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.98rem;
+  pointer-events: none; /* permite click-through excepto en controles */
+}
+#efTutorialTooltip h3 { margin:0 0 8px 0; color: var(--neon-pink,#ff295e); }
+#efTutBody { color: #cfeee6; line-height:1.35; }
+
+/* Controls son interactivos */
+#efTutControls { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; pointer-events: auto; }
+#efTutControls .btn.small { padding:6px 10px; font-size:0.88rem; }
+
+/* Prompt inicial */
+#efTutorialPrompt {
+  position: fixed; left:50%; top:14%; transform:translateX(-50%); z-index:10001;
+  width: min(720px,92%); max-width:720px;
+  background: linear-gradient(180deg,#0f1318,#0b0b0d);
+  color:#fff; padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.04);
+  box-shadow:0 18px 60px rgba(0,0,0,0.7); display:none;
+  pointer-events: auto;
+}
+#efTutorialPrompt.open { display:block; }
+
+/* Highlight en elementos (sombra + outline) */
+.ef-tut-highlight {
+  position: relative;
+  z-index: 10002 !important;
+  box-shadow: 0 18px 60px rgba(255,41,94,0.12) !important;
+  outline: 3px solid rgba(255,41,94,0.12) !important;
+  border-radius: 10px;
+  transform: translateY(-4px);
+  transition: box-shadow 220ms ease, outline 220ms ease, transform 220ms ease;
+}
+
+/* Glow pulsante para botones (carrito / whatsapp) */
+.ef-tut-glow {
+  animation: efGlowPulse 1.6s infinite;
+  box-shadow: 0 12px 40px rgba(255,41,94,0.18), 0 6px 26px rgba(255,41,94,0.12);
+  transform: translateY(-2px);
+}
+@keyframes efGlowPulse {
+  0% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,41,94,0.12); }
+  50% { transform: scale(1.06); box-shadow: 0 18px 54px rgba(255,41,94,0.22); }
+  100% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,41,94,0.12); }
+}
+
+/* Mobile: tooltip centrado y ancho completo */
+@media (max-width:720px) {
+  #efTutorialTooltip { width: calc(100% - 24px); left: 50%; top: 50%; transform: translate(-50%,-50%); }
+  #efTutorialPrompt { width: calc(100% - 24px); top: 8%; left: 50%; transform: translateX(-50%); }
+}
+    `;
+    document.head.appendChild(css);
+  }
+
+  /* Crea DOM del tutorial */
+  function createTutorialDom() {
+    if (document.getElementById('efTutorialOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'efTutorialOverlay';
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'efTutorialTooltip';
+    tooltip.innerHTML = `
+      <h3 id="efTutTitle"></h3>
+      <div id="efTutBody"></div>
+      <div id="efTutControls">
+        <button id="efTutPrev" class="btn small">Anterior</button>
+        <button id="efTutNext" class="btn small">Siguiente</button>
+        <button id="efTutSkip" class="btn small" style="background:#bbb;color:#222;">Saltar</button>
+      </div>
+    `;
+
+  const prompt = document.createElement('div');
+    prompt.id = 'efTutorialPrompt';
+    prompt.innerHTML = `
+      <div>
+        <h3>¿Deseas ver los tips?</h3>
+        <p>Recomendamos usar zoom 80% para mejor visualización. Los siguientes avisos flotantes mostrarán cómo usar el zoom desde una laptop y desde un dispositivo movil.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+          <button id="efStartTut" class="btn">Sí, empezar</button>
+          <button id="efSkipTut" class="btn" style="background:#bbb;color:#222;">No, gracias</button>
+        </div>
+      </div>
+    `;
+
+
+    document.body.appendChild(overlay);
+    document.body.appendChild(tooltip);
+    document.body.appendChild(prompt);
+
+    // Bind controls
+    document.getElementById('efTutPrev').addEventListener('click', () => showStep(currentIndex - 1));
+    document.getElementById('efTutNext').addEventListener('click', () => {
+      if (currentIndex >= STEPS.length - 1) return endTutorial();
+      showStep(currentIndex + 1);
+    });
+    document.getElementById('efTutSkip').addEventListener('click', endTutorial);
+    document.getElementById('efStartTut').addEventListener('click', () => { closePrompt(); startTutorial(); });
+    document.getElementById('efSkipTut').addEventListener('click', endTutorial);
+
+    // Overlay click advances by default
+    overlay.addEventListener('click', () => {
+      if (!isRunning) return;
+      if (currentIndex >= STEPS.length - 1) endTutorial();
+      else showStep(currentIndex + 1);
+    });
+
+    // Keyboard navigation while running
+    document.addEventListener('keydown', (e) => {
+      if (!isRunning) return;
+      if (e.key === 'Escape') endTutorial();
+      if (e.key === 'ArrowRight') {
+        if (currentIndex >= STEPS.length - 1) endTutorial();
+        else showStep(currentIndex + 1);
+      }
+      if (e.key === 'ArrowLeft') showStep(currentIndex - 1);
+    });
+  }
+
+  function openPrompt() {
+    const p = document.getElementById('efTutorialPrompt');
+    if (!p) return;
+    p.classList.add('open');
+  }
+  function closePrompt() {
+    const p = document.getElementById('efTutorialPrompt');
+    if (!p) return;
+    p.classList.remove('open');
+  }
+
+  /* Highlight & glow helpers */
+  let highlightedEl = null;
+  const activeGlows = new Set();
+
+  function highlightElement(el) {
+    clearHighlight();
+    if (!el) return;
+    highlightedEl = el;
+    el.classList.add('ef-tut-highlight');
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (e) {}
+  }
+  function clearHighlight() {
+    if (highlightedEl) {
+      highlightedEl.classList.remove('ef-tut-highlight');
+      highlightedEl = null;
+    }
+  }
+
+  function addGlow(selector) {
+    try {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      el.classList.add('ef-tut-glow');
+      activeGlows.add(selector);
+    } catch (e) {}
+  }
+  function removeGlow(selector) {
+    try {
+      const el = document.querySelector(selector);
+      if (!el) return;
+      el.classList.remove('ef-tut-glow');
+      activeGlows.delete(selector);
+    } catch (e) {}
+  }
+  function clearAllGlows() {
+    for (const s of Array.from(activeGlows)) removeGlow(s);
+    activeGlows.clear();
+  }
+
+  /* Flow control */
+  let currentIndex = 0;
+  let isRunning = false;
+
+  function startTutorial() {
+    injectTutorialStyles();
+    createTutorialDom();
+    isRunning = true;
+    document.getElementById('efTutorialOverlay').classList.add('visible');
+    showStep(0);
+  }
+
+  function showStep(index) {
+    if (index < 0) index = 0;
+    if (index >= STEPS.length) { endTutorial(); return; }
+    currentIndex = index;
+    const step = STEPS[index];
+
+    // Update tooltip content
+    const titleEl = document.getElementById('efTutTitle');
+    const bodyEl = document.getElementById('efTutBody');
+    titleEl.innerText = step.title || '';
+    bodyEl.innerText = step.text || '';
+
+    // Update controls visibility/text
+    document.getElementById('efTutPrev').style.display = index === 0 ? 'none' : 'inline-block';
+    document.getElementById('efTutNext').innerText = (index === STEPS.length - 1) ? 'Finalizar' : 'Siguiente';
+
+    // Clear previous highlights/glows
+    clearHighlight();
+    clearAllGlows();
+
+    // If step has an action, run it (e.g., open catalog or cart)
+    if (typeof step.action === 'function') {
+      try { step.action(); } catch (e) { console.error('tutorial step action error', e); }
+      // After action, try to highlight the selector (if any)
+      setTimeout(() => {
+        if (step.selector) {
+          const el = document.querySelector(step.selector);
+          if (el) highlightElement(el);
+        }
+        if (step.glowSelector) addGlow(step.glowSelector);
+      }, 360);
+      return;
+    }
+
+    // If step has glowSelector, add glow
+    if (step.glowSelector) addGlow(step.glowSelector);
+
+    // Try to highlight the element for the step (but tooltip stays centered)
+    if (step.selector) {
+      const el = document.querySelector(step.selector);
+      if (el) highlightElement(el);
+    }
+  }
+
+
+
+
+
+
+
+
+
+// Reemplaza la función `endTutorial` en tu tutorial.js por esta versión.
+// Esta versión elimina completamente el overlay, tooltip y prompt del DOM,
+// quita los estilos inyectados y limpia la marca global para que el tutorial
+// ya no quede encima de la página después de pulsar "No, gracias", "Saltar" o "Finalizar".
+
+function endTutorial() {
+  // marcar como no corriendo para que manejadores ignorados por isRunning queden inactivos
+  isRunning = false;
+
+  // limpiar efectos visuales
+  try { clearHighlight(); } catch (e) {}
+  try { clearAllGlows(); } catch (e) {}
+
+  // cerrar modal de producto si está abierto
+  try { if (typeof closeProductModal === 'function') closeProductModal(); } catch (e) {}
+
+  // quitar elementos del DOM para asegurar que no queden encima
+  ['efTutorialOverlay', 'efTutorialTooltip', 'efTutorialPrompt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  });
+
+  // quitar estilos inyectados (si existe)
+  const styleIds = ['tutorialStyles_centered_v2', 'tutorialStyles_centered', 'tutorialStyles_centered_v3'];
+  styleIds.forEach(sid => {
+    const s = document.getElementById(sid);
+    if (s && s.parentNode) s.parentNode.removeChild(s);
+  });
+
+  // eliminar referencias globales del tutorial para evitar re-entrada inesperada
+  try { delete window.startEfTutorial; } catch (e) {}
+  try { delete window.endEfTutorial; } catch (e) {}
+  try { delete window.__electroflips_tutorial_installed_centered_v2; } catch (e) {}
+  try { delete window.__electroflips_tutorial_installed_centered; } catch (e) {}
+  try { delete window.__electroflips_tutorial_installed_centered_v3; } catch (e) {}
+
+  // pequeña pausa para asegurar que no queden clases aplicadas
+  setTimeout(() => {
+    // intentar limpiar cualquier highlight o glow restante por si acaso
+    try { document.querySelectorAll('.ef-tut-highlight').forEach(n => n.classList.remove('ef-tut-highlight')); } catch(e){}
+    try { document.querySelectorAll('.ef-tut-glow').forEach(n => n.classList.remove('ef-tut-glow')); } catch(e){}
+  }, 80);
+}
+
+
+
+
+
+
+  // Expose controls to console
+  window.startEfTutorial = function () { closePrompt(); startTutorial(); };
+  window.endEfTutorial = endTutorial;
+
+  // Init on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    injectTutorialStyles();
+    createTutorialDom();
+    // Delay a bit to avoid races con app.js
+    setTimeout(openPrompt, 500);
+  });
+})();
+
+
+
+
+/* Instrucciones:
+   Añade el siguiente bloque al final de tu app.js (o integra las funciones dentro del mismo archivo).
+   - Llama a highlightCartAndShowPrompt() desde addToCart (ya incluido en el ejemplo).
+   - Esto crea un tip flotante con mensaje "Finalizar compra" y hace parpadear el botón del carrito.
+*/
+
+/* ==================== UI: resaltado del carrito + mensaje/ flecha ==================== */
+
+/**
+ * Posiciona el tip cerca del elemento objetivo (ej. #cartBubbleBtn).
+ * Intenta ajustar para que la flecha apunte al centro del target.
+ */
+function positionTipNearTarget(targetEl, tipEl, opts = {}) {
+  if (!targetEl || !tipEl) return;
+  const rect = targetEl.getBoundingClientRect();
+  const tipRect = tipEl.getBoundingClientRect();
+  const gap = opts.gap || 12;
+  // Colocar encima y centrado horizontalmente respecto al target
+  const left = Math.max(8, rect.left + rect.width / 2 - tipRect.width / 2);
+  const top = Math.max(8, rect.top - tipRect.height - gap);
+  tipEl.style.left = `${left}px`;
+  tipEl.style.top = `${top}px`;
+
+  // Posicionar la "flecha" interna para que apunte al centro del target
+  const arrow = tipEl.querySelector('.cart-tip-arrow');
+  if (arrow) {
+    const targetCenterX = rect.left + rect.width / 2;
+    const arrowLeft = Math.min(tipRect.width - 18, Math.max(10, targetCenterX - left - 8));
+    arrow.style.left = `${arrowLeft}px`;
+  }
+}
+
+/**
+ * Muestra el tip flotante + hace "blink" el botón del carrito.
+ * - duration: ms que dura la animación y la visibilidad del tip.
+ * - clickable: si true, clic en el tip abre el carrito.
+ */
+function highlightCartAndShowPrompt({ duration = 4000, clickable = true } = {}) {
+  const cartBtn = document.getElementById('cartBubbleBtn');
+  if (!cartBtn) return;
+
+  // Añadir clase blink al botón
+  cartBtn.classList.remove('ef-cart-blink'); // reinicio
+  // Force reflow para reiniciar la animación si ya está aplicada
+  void cartBtn.offsetWidth;
+  cartBtn.classList.add('ef-cart-blink');
+
+  // Crear / reutilizar tip flotante
+  let tip = document.getElementById('cartPulseTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'cartPulseTip';
+    tip.className = 'cart-pulse-tip';
+    tip.setAttribute('role', 'status');
+    tip.setAttribute('aria-live', 'polite');
+    tip.innerHTML = `
+      <div class="cart-tip-body">
+        <div class="cart-tip-text">Finalizar compra</div>
+        <div class="cart-tip-note">Haz clic en el carrito para revisar tu pedido</div>
+      </div>
+      <div class="cart-tip-arrow" aria-hidden="true"></div>
+    `;
+    document.body.appendChild(tip);
+  }
+
+  // Posicionar inmediatamente y al redimensionar
+  positionTipNearTarget(cartBtn, tip);
+  const onResize = () => positionTipNearTarget(cartBtn, tip);
+  window.addEventListener('resize', onResize);
+
+  // Mostrar tip con animación
+  tip.classList.remove('show');
+  // Forzar reflow para reiniciar
+  void tip.offsetWidth;
+  tip.classList.add('show');
+
+  // click abre carrito si se permite
+  tip.onclick = (e) => {
+    e.stopPropagation();
+    if (clickable) {
+      cartBubbleHandler();
+      tip.classList.remove('show');
+    }
+  };
+
+  // Quitar efectos al terminar
+  setTimeout(() => {
+    try { cartBtn.classList.remove('ef-cart-blink'); } catch (e) {}
+    try { tip.classList.remove('show'); } catch (e) {}
+    window.removeEventListener('resize', onResize);
+    // opcional: remover del DOM tras animación para evitar acumulación
+    setTimeout(() => {
+      const t = document.getElementById('cartPulseTip');
+      if (t && !t.classList.contains('show')) {
+        t.parentNode && t.parentNode.removeChild(t);
+      }
+    }, 420);
+  }, duration);
+}
+
+/* Exponer para debug/control manual */
+window.showCartHighlightTip = function (opts) { highlightCartAndShowPrompt(opts); };
+
+/* ==================== Integración con addToCart ==================== */
+/* Inserta/modifica la llamada en tu addToCart para que dispare la animación al añadir producto.
+   En tu addToCart ya existente, justo después de showToast() y renderCart() se debe llamar:
+     highlightCartAndShowPrompt({ duration: 4500 });
+   A continuación hay un ejemplo minimalista que sustituye/inserta esa llamada.
+*/
+
+const _orig_addToCart = window.addToCart || null;
+window.addToCart = function (id) {
+  // Si ya tenías la función (en este mismo archivo), ejecutarla para mantener la lógica previa
+  if (typeof _orig_addToCart === 'function') {
+    _orig_addToCart(id);
+    // Llamada extra: mostrar tip y parpadeo
+    try { highlightCartAndShowPrompt({ duration: 4500, clickable: true }); } catch (e) { console.error(e); }
+    return;
+  }
+
+  // Si no existe la impl original (no debería pasar), fallback simple
+  if (!id) return;
+  try {
+    // buscar producto y replicar comportamiento mínimo
+    const prod = PRODUCTS.find(p => String(p.id) === String(id));
+    if (!prod) { showToast('Producto no encontrado.'); return; }
+    if (prod.agotado) { showToast('Producto agotado.'); return; }
+    const precioFinal = prod.oferta ? prod.oferta : prod.precio;
+    const existing = cart.find(p => String(p.id) === String(id));
+    if (existing) existing.cantidad += 1;
+    else cart.push({ ...prod, precio: precioFinal, cantidad: 1 });
+    showToast('Producto agregado al carrito');
+    renderCart();
+    updateCartBubble();
+    highlightCartAndShowPrompt({ duration: 4500, clickable: true });
+  } catch (e) {
+    console.error('addToCart error (fallback):', e);
+  }
+};
