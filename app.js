@@ -189,46 +189,33 @@ function renderCatalog() {
     comboBanner.innerHTML = `<div><strong>¡Combo 3x2 activo!</strong><span style="display:block;font-size:1rem;">Elige cualquier <b>3 servicios</b> y el de menor precio elegible ¡te sale GRATIS!</span></div>`;
   } else if (comboBanner) comboBanner.remove();
 
-  // Crear wrapper para mantener grid compacto
-  const wrapper = document.createElement('div');
-  wrapper.className = 'catalog-wrapper';
-
-  // Crear contenedor grid para categorías
-  const categoriesGrid = document.createElement('div');
-  categoriesGrid.className = 'categories-grid';
-
   // categories
   const cats = [...new Set(PRODUCTS.map(p => p.categoria || 'Sin categoría'))];
-  
-  // Almacenar referencias de headers
-  const categoryRefs = {};
-  
   cats.forEach(cat => {
-    // CREAR HEADER PLEGABLE (TARJETA COMPACTA)
+ 
+
+        // CREAR HEADER PLEGABLE (CUADRO COLORIDO)
     const catHeader = document.createElement('div');
     catHeader.className = 'category-header collapsed'; // COMIENZA CONTRAÍDO
     catHeader.setAttribute('data-category', cat);
     catHeader.innerHTML = `
       <div class="category-header-content">
         <span class="category-toggle">▶</span>
-        <h3 class="category-title">${htmlEscape(cat)}</h3>
-        <p class="category-hint">Da click para desplegar</p>
+        <div style="flex: 1;">
+          <h3 class="category-title">${htmlEscape(cat)}</h3>
+          <p class="category-hint">Da click para desplegar</p>
+        </div>
       </div>
     `;
-    
-    categoriesGrid.appendChild(catHeader);
-    categoryRefs[cat] = catHeader;
-  });
+    container.appendChild(catHeader);
 
-  wrapper.appendChild(categoriesGrid);
-  container.appendChild(wrapper);
-
-  // CREAR CONTENEDORES DE PRODUCTOS (debajo del grid, uno al lado del otro)
-  cats.forEach(cat => {
     // CREAR CONTENEDOR DE PRODUCTOS (inicialmente plegado)
     const catContent = document.createElement('div');
     catContent.className = 'category-container collapsed'; // COMIENZA CONTRAÍDO
     catContent.setAttribute('data-category', cat);
+
+
+
 
     const grid = document.createElement('div');
     grid.className = 'grid';
@@ -240,6 +227,7 @@ function renderCatalog() {
 
       if (prod.oferta || prod.promo) card.classList.add('is-promoted');
 
+      // Build compact visible elements; longer info remains in modal (detalles)
       const precioHtml = prod.oferta
         ? `<span class="oferta">Oferta: ${precioCOP(prod.oferta)} <span style="font-size:0.95em;text-decoration:line-through;color:#aaa;">${precioCOP(prod.precio)}</span></span>`
         : `<span class="precio">${precioCOP(prod.precio)}</span>`;
@@ -250,11 +238,13 @@ function renderCatalog() {
 
       const agotadoHtml = prod.agotado ? `<div><span class="agotado-badge">Agotado</span></div>` : '';
 
+      // En la tarjeta mostramos img, nombre, precio visible y botones. El resto será visible en el modal (detalles)
       card.innerHTML = `
         <img class="product-image" src="${prod.imagen || 'images/placeholder.png'}" alt="${htmlEscape(prod.nombre)}" onclick="showProductDetails('${prod.id}')" style="cursor:pointer">
         ${agotadoHtml}
         <h3 onclick="showProductDetails('${prod.id}')" style="cursor:pointer">${htmlEscape(prod.nombre)}</h3>
 
+        <!-- Precio visible fuera de la tarjeta -->
         <div class="card-price" aria-hidden="false">${precioHtml}</div>
 
         <div class="card-actions">
@@ -262,6 +252,7 @@ function renderCatalog() {
           <button class="btn small ver-mas-btn" onclick="showProductDetails('${prod.id}')">Mas Info</button>
         </div>
 
+        <!-- detailed info hidden for compact view but used for accessibility / desktop view -->
         <div class="card-info" aria-hidden="true" style="display:none;">
           ${promoHtml}
           ${descHtml}
@@ -272,25 +263,18 @@ function renderCatalog() {
       grid.appendChild(card);
     });
 
-    catContent.appendChild(grid);
+      catContent.appendChild(grid);
     container.appendChild(catContent);
-
     // BIND EVENTO CLICK AL HEADER PARA PLEGAR/DESPLEGAR
-    const catHeader = categoryRefs[cat];
-    if (catHeader) {
-      catHeader.addEventListener('click', function(e) {
-        e.preventDefault();
-        const relatedContent = container.querySelector(`.category-container[data-category="${cat}"]`);
-        if (relatedContent) {
-          relatedContent.classList.toggle('collapsed');
-          catHeader.classList.toggle('collapsed');
-        }
-      });
-    }
+    catHeader.addEventListener('click', function() {
+      const relatedContent = container.querySelector(`.category-container[data-category="${cat}"]`);
+      if (relatedContent) {
+        relatedContent.classList.toggle('collapsed');
+        catHeader.classList.toggle('collapsed');
+      }
+    });
   });
 }
-
-
 
 /* ========== Home (Favorites + Promos) ========== */
 function renderHomeExtras() {
